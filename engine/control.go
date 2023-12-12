@@ -28,3 +28,29 @@ func (engine *Engine) DownLoadFile(name, url, path string) error {
 
 	return nil
 }
+
+func (engine *Engine) ScanResume() error {
+	err := engine.readIndexFile()
+	if err != nil {
+		return err
+	}
+
+	err = engine.scanIndexDir()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ReDownResume 重新下载未完成下载的任务
+func (engine *Engine) ReDownResume() {
+	for _, fileName := range engine.resumeList {
+		fileInfo := engine.downFileInfos[fileName]
+		err := fileInfo.createTask()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+	}
+}

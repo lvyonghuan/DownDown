@@ -10,10 +10,14 @@ import (
 // 全局管理器
 type Engine struct {
 	Config        config.Config
-	DownFileNum   int                     // 下载文件数量
-	downFileInfos map[string]DownFileInfo // 下载文件对象。key为文件名，value为下载文件对象
+	DownFileNum   int                      // 下载文件数量
+	downFileInfos map[string]*DownFileInfo // 下载文件对象。key为文件名，value为下载文件对象
 
 	downLimit chan struct{} //下载限速器
+
+	resumeIndex *os.File   //断点续传文件索引
+	resumeList  []string   //断点续传文件列表
+	resumeMu    sync.Mutex //并发保护锁
 }
 
 // DownFileInfo 下载文件对象
@@ -27,6 +31,8 @@ type DownFileInfo struct {
 	downManager downManager // 下载管理器
 
 	engine *Engine // 指向引擎
+
+	isResume bool //是否是断点续传文件
 }
 
 // downManager 下载管理器
@@ -37,7 +43,9 @@ type downManager struct {
 	chunks    chan chunk //分片下载队列
 	mu        sync.Mutex //并发保护锁
 
-	file *os.File //文件对象
+	file       *os.File   //文件对象
+	resumeFile *os.File   //恢复文件对象
+	reMu       sync.Mutex //并发保护锁
 
 	waitGroup sync.WaitGroup //等待组
 
@@ -52,4 +60,6 @@ type chunk struct {
 	start     int    //分片起始
 	end       int    //分片结束
 	rangeSize string // 分片在文件中的range
+
+	isDown bool //是否已经下载-仅用于断点续传
 }

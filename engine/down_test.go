@@ -12,7 +12,7 @@ func TestGetFileInfo(t *testing.T) {
 		DownLimit: 104857600,
 	}
 	engine := InitEngine(config)
-	err := engine.DownLoadFile("bilibili.exe", "https://dl.hdslb.com/mobile/fixed/bili_win/bili_win-install.exe?v=1.12.5", "../test")
+	err := engine.DownLoadFile("facenet.pth", "https://huggingface.co/lllyasviel/Annotators/resolve/main/facenet.pth", "../test")
 	if err != nil {
 		t.Error(err)
 	}

@@ -18,7 +18,10 @@ func (downFileInfo *DownFileInfo) getFileInfo() (err error) {
 	client, err := Client(downFileInfo.engine.Config.Proxy)
 	if err != nil {
 		log.Println(err)
+		err = nil
 	}
+
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -95,6 +98,13 @@ func (downFileInfo *DownFileInfo) chunker() (err error) {
 // 根据分片创建下载任务
 func (downFileInfo *DownFileInfo) createTask() (err error) {
 	//创建下载任务
+	//在resume索引中加入该任务
+	err = downFileInfo.addIndexFile()
+	if err != nil {
+		log.Println(err)
+		err = nil
+	}
+
 	//申请一块磁盘空间
 	file, err := os.Create(downFileInfo.FilePath + "/" + downFileInfo.FileName)
 	if err != nil {
@@ -109,8 +119,12 @@ func (downFileInfo *DownFileInfo) createTask() (err error) {
 
 	//建立结束监听器
 	go downFileInfo.stop()
-	log.Println("下载任务" + downFileInfo.FileName + "创建成功")
-	log.Println("开始下载文件" + downFileInfo.FileName + "...")
+	if !downFileInfo.isResume {
+		log.Println("下载任务" + downFileInfo.FileName + "创建成功")
+		log.Println("开始下载文件" + downFileInfo.FileName + "...")
+	} else {
+		log.Println("继续下载" + downFileInfo.FileName + ",下载进度：" + strconv.Itoa(downFileInfo.downManager.downChunk) + "/" + strconv.Itoa(downFileInfo.downManager.chunkNum))
+	}
 
 	//开始下载
 	for downFileInfo.downManager.downChunk != downFileInfo.downManager.chunkNum {
@@ -124,6 +138,8 @@ func (downFileInfo *DownFileInfo) createTask() (err error) {
 		}
 	}
 
+	//从resume中删除该任务
+	err = downFileInfo.deleteIndexFile()
 	log.Println("文件" + downFileInfo.FileName + "下载完成")
 
 	return err
@@ -144,6 +160,8 @@ func (downFileInfo *DownFileInfo) downChunk(chunk chunk) {
 	if err != nil {
 		log.Println(err)
 	}
+
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ")
 
 	//发送请求
 	resp, err := client.Do(req)
@@ -175,6 +193,11 @@ func (downFileInfo *DownFileInfo) downChunk(chunk chunk) {
 	downFileInfo.downManager.mu.Lock()
 	downFileInfo.downManager.downChunk++
 	downFileInfo.downManager.mu.Unlock()
+	err = downFileInfo.writeResumeFile(chunk.chunkID)
+	if err != nil {
+		log.Println(err)
+	}
+
 	log.Println("下载进度：" + strconv.Itoa(downFileInfo.downManager.downChunk) + "/" + strconv.Itoa(downFileInfo.downManager.chunkNum))
 }
 
