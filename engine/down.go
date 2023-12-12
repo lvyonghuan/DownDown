@@ -105,17 +105,24 @@ func (downFileInfo *DownFileInfo) createTask() (err error) {
 		err = nil
 	}
 
-	//申请一块磁盘空间
-	file, err := os.Create(downFileInfo.FilePath + "/" + downFileInfo.FileName)
-	if err != nil {
-		return err
+	var file *os.File
+	if !downFileInfo.isResume { //申请一块磁盘空间
+		file, err = os.Create(downFileInfo.FilePath + "\\" + downFileInfo.FileName)
+		if err != nil {
+			return err
+		}
+		err = file.Truncate(downFileInfo.FileSize)
+		if err != nil {
+			return err
+		}
+	} else {
+		file, err = os.OpenFile(downFileInfo.FilePath+"\\"+downFileInfo.FileName, os.O_RDWR, 0666)
+		if err != nil {
+			return err
+		}
 	}
 	defer file.Close()
 	downFileInfo.downManager.file = file
-	err = file.Truncate(downFileInfo.FileSize)
-	if err != nil {
-		return err
-	}
 
 	//建立结束监听器
 	go downFileInfo.stop()
@@ -130,6 +137,8 @@ func (downFileInfo *DownFileInfo) createTask() (err error) {
 	for downFileInfo.downManager.downChunk != downFileInfo.downManager.chunkNum {
 		select {
 		case chunk := <-downFileInfo.downManager.chunks:
+			//限速
+			<-downFileInfo.engine.downLimit
 			go downFileInfo.downChunk(chunk)
 		case chunk := <-downFileInfo.downManager.reDown:
 			downFileInfo.downManager.chunks <- chunk //重新加入到队列中
@@ -197,6 +206,9 @@ func (downFileInfo *DownFileInfo) downChunk(chunk chunk) {
 	if err != nil {
 		log.Println(err)
 	}
+
+	//令牌桶+1
+	downFileInfo.engine.downLimit <- struct{}{}
 
 	log.Println("下载进度：" + strconv.Itoa(downFileInfo.downManager.downChunk) + "/" + strconv.Itoa(downFileInfo.downManager.chunkNum))
 }

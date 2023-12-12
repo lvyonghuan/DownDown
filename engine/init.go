@@ -12,6 +12,10 @@ func InitEngine(config config.Config) *Engine {
 	//初始化限速器
 	//将限速由chunkSize转化为令牌桶令牌size
 	engine.downLimit = make(chan struct{}, config.DownLimit/config.ChunkSize)
+	//填装令牌桶
+	for i := 0; i < config.DownLimit/config.ChunkSize; i++ {
+		engine.downLimit <- struct{}{}
+	}
 
 	return engine
 }

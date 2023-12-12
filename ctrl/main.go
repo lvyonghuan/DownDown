@@ -15,7 +15,7 @@ func main() {
 	}
 
 	e := engine.InitEngine(config)
-	err = scanResume(e)
+	err = scanResumeAndDown(e)
 	if err != nil {
 		panic(err)
 	}
@@ -24,13 +24,18 @@ func main() {
 	listenDownLoadRequest()
 }
 
-func scanResume(engine *engine.Engine) error {
+func scanResumeAndDown(engine *engine.Engine) error {
 	err := engine.InitIndexFile()
 	if err != nil {
 		return err
 	}
 
 	err = engine.ScanResume()
+	if err != nil {
+		return err
+	}
+
+	engine.ReDownResume()
 
 	return err
 }

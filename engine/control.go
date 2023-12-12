@@ -46,7 +46,7 @@ func (engine *Engine) ScanResume() error {
 // ReDownResume 重新下载未完成下载的任务
 func (engine *Engine) ReDownResume() {
 	for _, fileName := range engine.resumeList {
-		fileInfo := engine.downFileInfos[fileName]
+		fileInfo := engine.downFileInfos[fileName[:len(fileName)-4]]
 		err := fileInfo.createTask()
 		if err != nil {
 			log.Println(err)

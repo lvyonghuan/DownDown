@@ -22,12 +22,12 @@ func (engine *Engine) InitIndexFile() error {
 
 // 添加文件索引
 func (downFileInfo *DownFileInfo) addIndexFile() error {
-	downFileInfo.engine.resumeMu.Lock()
 	//如果是断点续传，则不需要添加索引
 	if downFileInfo.isResume {
 		return nil
 	}
 
+	downFileInfo.engine.resumeMu.Lock()
 	//在索引文件中加入该任务
 	_, err := downFileInfo.engine.resumeIndex.WriteString(downFileInfo.FileName + ".txt\n")
 	if err != nil {
@@ -144,7 +144,15 @@ func (engine *Engine) scanIndexDir() error {
 			log.Println(err)
 			continue
 		}
+		fileInfo.FileName = index[:len(index)-4]
 		fileInfo.isResume = true
+
+		//重建chan
+		fileInfo.downManager.stop = make(chan struct{}, 1)
+		fileInfo.downManager.reDown = make(chan chunk, 1)
+
+		//重建与engine的关系
+		fileInfo.engine = engine
 
 		//加入到下载队列
 		engine.downFileInfos[fileInfo.FileName] = fileInfo
@@ -217,6 +225,9 @@ func scanIndexFile(resumeFile *os.File) (fileInfo *DownFileInfo, err error) {
 	line = scanner.Text()
 	parts = strings.Split(line, util.ResumeDelimiter)
 	for _, part := range parts {
+		if part == "" {
+			break
+		}
 		chunkID, err := strconv.Atoi(part)
 		if err != nil {
 			return nil, err
@@ -228,9 +239,12 @@ func scanIndexFile(resumeFile *os.File) (fileInfo *DownFileInfo, err error) {
 	//将未下载的分片加入下载队列
 	for _, chunk := range chunks {
 		if chunk.isDown == false {
+			fileInfo.downManager.waitGroup.Add(1)
 			fileInfo.downManager.chunks <- chunk
 		}
 	}
+
+	fileInfo.downManager.resumeFile = resumeFile
 
 	return fileInfo, err
 }
