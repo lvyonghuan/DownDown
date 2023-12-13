@@ -3,10 +3,11 @@ package main
 import (
 	config2 "DownDown/config"
 	"DownDown/engine"
-	"log"
 
 	"github.com/gin-gonic/gin"
 )
+
+var e *engine.Engine
 
 func main() {
 	config, err := config2.ReadConfig()
@@ -14,13 +15,13 @@ func main() {
 		panic(err)
 	}
 
-	e := engine.InitEngine(config)
+	e = engine.InitEngine(config)
 	err = scanResumeAndDown(e)
 	if err != nil {
 		panic(err)
 	}
 
-	go downFile(e)
+	go e.DownControl()
 	listenDownLoadRequest()
 }
 
@@ -35,7 +36,7 @@ func scanResumeAndDown(engine *engine.Engine) error {
 		return err
 	}
 
-	engine.ReDownResume()
+	go engine.ReDownResume()
 
 	return err
 }
@@ -46,16 +47,4 @@ func listenDownLoadRequest() {
 	r.GET("/down", down)
 
 	r.Run(":8080")
-}
-
-func downFile(engine *engine.Engine) {
-	for {
-		select {
-		case info := <-downChannel:
-			err := engine.DownLoadFile(info[0], info[1], info[2])
-			if err != nil {
-				log.Println(err)
-			}
-		}
-	}
 }

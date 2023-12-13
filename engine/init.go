@@ -8,6 +8,7 @@ func InitEngine(config config.Config) *Engine {
 	engine.Config = config
 	engine.DownFileNum = 0
 	engine.downFileInfos = make(map[string]*DownFileInfo)
+	engine.DownInfo = make(chan [3]string, 1)
 
 	//初始化限速器
 	//将限速由chunkSize转化为令牌桶令牌size

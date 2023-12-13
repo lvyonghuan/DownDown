@@ -2,7 +2,17 @@ package engine
 
 import "log"
 
-func (engine *Engine) DownLoadFile(name, url, path string) error {
+// DownControl 下载调度器
+func (engine *Engine) DownControl() {
+	for {
+		select {
+		case downInfo := <-engine.DownInfo:
+			go engine.DownLoadFile(downInfo[0], downInfo[1], downInfo[2])
+		}
+	}
+}
+
+func (engine *Engine) DownLoadFile(name, url, path string) {
 	// 初始化下载对象
 	downFileInfo := engine.InitDownFileInfo(name, path, url)
 
@@ -10,23 +20,21 @@ func (engine *Engine) DownLoadFile(name, url, path string) error {
 	log.Println("获取文件" + name + "信息中...")
 	err := downFileInfo.getFileInfo()
 	if err != nil {
-		return err
+		log.Println("下载文件"+name+"失败", "错误信息：", err)
 	}
 
 	//分片
 	err = downFileInfo.chunker()
 	if err != nil {
-		return err
+		log.Println("下载文件"+name+"失败", "错误信息：", err)
 	}
 
 	// 创建下载任务
 	log.Println("创建下载任务" + name + "中...")
 	err = downFileInfo.createTask()
 	if err != nil {
-		return err
+		log.Println("下载文件"+name+"失败", "错误信息：", err)
 	}
-
-	return nil
 }
 
 func (engine *Engine) ScanResume() error {

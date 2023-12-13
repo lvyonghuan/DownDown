@@ -177,6 +177,8 @@ func (downFileInfo *DownFileInfo) downChunk(chunk chunk) {
 	if err != nil {
 		log.Println(err)
 		downFileInfo.downManager.reDown <- chunk
+		//令牌桶+1
+		downFileInfo.engine.downLimit <- struct{}{}
 		return
 	}
 	defer resp.Body.Close()
@@ -186,6 +188,8 @@ func (downFileInfo *DownFileInfo) downChunk(chunk chunk) {
 	if err != nil {
 		log.Println(err)
 		downFileInfo.downManager.reDown <- chunk
+		//令牌桶+1
+		downFileInfo.engine.downLimit <- struct{}{}
 		return
 	}
 
@@ -194,6 +198,8 @@ func (downFileInfo *DownFileInfo) downChunk(chunk chunk) {
 	if err != nil {
 		log.Println(err)
 		downFileInfo.downManager.reDown <- chunk
+		//令牌桶+1
+		downFileInfo.engine.downLimit <- struct{}{}
 		return
 	}
 

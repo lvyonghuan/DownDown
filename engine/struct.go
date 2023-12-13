@@ -18,6 +18,8 @@ type Engine struct {
 	resumeIndex *os.File   //断点续传文件索引
 	resumeList  []string   //断点续传文件列表
 	resumeMu    sync.Mutex //并发保护锁
+
+	DownInfo chan [3]string //下载通道
 }
 
 // DownFileInfo 下载文件对象
